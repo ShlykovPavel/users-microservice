@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/ShlykovPavel/users-microservice/internal/config"
+	users "github.com/ShlykovPavel/users-microservice/internal/server/users/create"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -36,7 +37,7 @@ func main() {
 		DbPort:     cfg.DbPort,
 	}
 
-	_, err = database.CreatePool(context.Background(), &dbConfig, logger)
+	poll, err := database.CreatePool(context.Background(), &dbConfig, logger)
 
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
@@ -44,13 +45,15 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
+	router.Post("/register", users.CreateUser(logger, poll, cfg.ServerTimeout))
+
 	logger.Info("Starting HTTP server", slog.String("adress", cfg.Address))
 	// Run server
 	srv := &http.Server{
-		Addr:    cfg.Address,
-		Handler: router,
-		//ReadHeaderTimeout: cfg.HTTPServer.Timeout,
-		//WriteTimeout:      cfg.HTTPServer.Timeout,
+		Addr:              cfg.Address,
+		Handler:           router,
+		ReadHeaderTimeout: cfg.ServerTimeout,
+		WriteTimeout:      cfg.ServerTimeout,
 		//IdleTimeout:       cfg.HTTPServer.IdleTimeout,
 	}
 	if err := srv.ListenAndServe(); err != nil {

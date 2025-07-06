@@ -1,6 +1,7 @@
 package users
 
 import (
+	"context"
 	"errors"
 	usersDto "github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/create_user"
 	resp "github.com/ShlykovPavel/users-microservice/internal/lib/api/response"
@@ -12,15 +13,20 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
-func CreateUser(log *slog.Logger, dbPoll *pgxpool.Pool) http.HandlerFunc {
+func CreateUser(log *slog.Logger, dbPoll *pgxpool.Pool, timeout time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "server/users.CreateUser"
 		log = log.With(
 			slog.String("operation", op),
 			slog.String("request_id", middleware.GetReqID(r.Context())),
 			slog.String("url", r.URL.Path))
+		//Создаём контекст для управления временем обработки запроса
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
+		defer cancel()
+
 		usrCreate := users_db.NewUsersDB(dbPoll, log)
 
 		var user usersDto.UserCreate
@@ -50,12 +56,17 @@ func CreateUser(log *slog.Logger, dbPoll *pgxpool.Pool) http.HandlerFunc {
 
 		user.Password = passwordHash
 		//Записываем в бд
-		userId, err := usrCreate.CreateUser(r.Context(), &user)
+		userId, err := usrCreate.CreateUser(ctx, &user)
 		if err != nil {
 			log.Error("Error while creating user", "err", err)
 			if errors.Is(err, users_db.ErrEmailAlreadyExists) {
 				resp.RenderResponse(w, r, http.StatusBadRequest, resp.Error(
 					err.Error()))
+				return
+			}
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				log.Warn("Request canceled or timed out", slog.Any("err", err))
+				resp.RenderResponse(w, r, http.StatusGatewayTimeout, resp.Error("Request timed out or canceled"))
 				return
 			}
 			resp.RenderResponse(w, r, http.StatusInternalServerError, resp.Error(err.Error()))

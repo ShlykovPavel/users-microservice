@@ -51,13 +51,16 @@ func NewUsersDB(dbPoll *pgxpool.Pool, log *slog.Logger) *UserRepositoryImpl {
 // После запроса возвращается Id созданного пользователя
 func (us *UserRepositoryImpl) CreateUser(ctx context.Context, userinfo *create_user.UserCreate) (int64, error) {
 	query := `
-INSERT INTO users (first_name, last_name, email, password, Role)
-VALUES ($1, $2, $3, $4, 'user')
+INSERT INTO users (first_name, last_name, email, password, Role, phone)
+VALUES ($1, $2, $3, $4, 'user', $5)
 RETURNING id`
-
 	var id int64
-	err := us.db.QueryRow(ctx, query, userinfo.FirstName, userinfo.LastName, userinfo.Email, userinfo.Password).Scan(&id)
+	err := us.db.QueryRow(ctx, query, userinfo.FirstName, userinfo.LastName, userinfo.Email, userinfo.Password, userinfo.Phone).Scan(&id)
 	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			us.log.Warn("Database query canceled or timed out", slog.Any("error", err))
+			return 0, err
+		}
 		dbErr := database.PsqlErrorHandler(err)
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == database.PSQLUniqueError {
 			return 0, ErrEmailAlreadyExists
