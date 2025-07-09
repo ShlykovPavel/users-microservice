@@ -6,6 +6,7 @@ import (
 	"github.com/ShlykovPavel/users-microservice/internal/config"
 	users "github.com/ShlykovPavel/users-microservice/internal/server/users/create"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database"
+	"github.com/ShlykovPavel/users-microservice/internal/storage/database/repositories/users_db"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"log"
@@ -39,13 +40,15 @@ func main() {
 
 	poll, err := database.CreatePool(context.Background(), &dbConfig, logger)
 
+	userRepository := users_db.NewUsersDB(poll, logger)
+
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	router.Post("/register", users.CreateUser(logger, poll, cfg.ServerTimeout))
+	router.Post("/register", users.CreateUser(logger, userRepository, cfg.ServerTimeout))
 
 	logger.Info("Starting HTTP server", slog.String("adress", cfg.Address))
 	// Run server

@@ -114,9 +114,9 @@ func (us *UserRepositoryImpl) CheckAdminInDB(ctx context.Context) (UserInfo, err
 }
 
 func (us *UserRepositoryImpl) AddFirstAdmin(ctx context.Context, passwordHash string) error {
-	query := `INSERT INTO users (id, first_name, last_name, email, password, Role) VALUES ($1, $2, $3, $4, $5, $6)`
+	query := `INSERT INTO users (id, first_name, last_name, email, password, Role, phone) VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
-	_, err := us.db.Exec(ctx, query, 0, "Admin first name", "Admin last name", "admin@admin.com", passwordHash, "admin")
+	_, err := us.db.Exec(ctx, query, 0, "Admin first name", "Admin last name", "admin@admin.com", passwordHash, "admin", +78901234567)
 	if err != nil {
 		dbErr := database.PsqlErrorHandler(err)
 		return dbErr

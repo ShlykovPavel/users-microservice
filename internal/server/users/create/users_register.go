@@ -10,13 +10,12 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"log/slog"
 	"net/http"
 	"time"
 )
 
-func CreateUser(log *slog.Logger, dbPoll *pgxpool.Pool, timeout time.Duration) http.HandlerFunc {
+func CreateUser(log *slog.Logger, userRepository users_db.UserRepository, timeout time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "server/users.CreateUser"
 		log = log.With(
@@ -26,8 +25,6 @@ func CreateUser(log *slog.Logger, dbPoll *pgxpool.Pool, timeout time.Duration) h
 		//Создаём контекст для управления временем обработки запроса
 		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		defer cancel()
-
-		usrCreate := users_db.NewUsersDB(dbPoll, log)
 
 		var user usersDto.UserCreate
 		err := render.DecodeJSON(r.Body, &user)
@@ -56,7 +53,7 @@ func CreateUser(log *slog.Logger, dbPoll *pgxpool.Pool, timeout time.Duration) h
 
 		user.Password = passwordHash
 		//Записываем в бд
-		userId, err := usrCreate.CreateUser(ctx, &user)
+		userId, err := userRepository.CreateUser(ctx, &user)
 		if err != nil {
 			log.Error("Error while creating user", "err", err)
 			if errors.Is(err, users_db.ErrEmailAlreadyExists) {
