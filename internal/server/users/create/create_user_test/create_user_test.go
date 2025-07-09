@@ -26,8 +26,8 @@ func (m *MockUserRepository) CreateUser(ctx context.Context, userinfo *create_us
 	return args.Get(0).(int64), args.Error(1)
 }
 
-func (m *MockUserRepository) GetUser(ctx context.Context, userEmail string) (users_db.UserInfo, error) {
-	args := m.Called(ctx, userEmail)
+func (m *MockUserRepository) GetUser(ctx context.Context, userId int64) (users_db.UserInfo, error) {
+	args := m.Called(ctx, userId)
 	return args.Get(0).(users_db.UserInfo), args.Error(1)
 }
 
