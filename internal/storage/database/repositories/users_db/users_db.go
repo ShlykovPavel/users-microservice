@@ -16,7 +16,7 @@ var ErrUserNotFound = errors.New("Пользователь не найден ")
 
 type UserRepository interface {
 	CreateUser(ctx context.Context, userinfo *create_user.UserCreate) (int64, error)
-	GetUser(ctx context.Context, userEmail string) (UserInfo, error)
+	GetUser(ctx context.Context, userId int64) (UserInfo, error)
 	CheckAdminInDB(ctx context.Context) (UserInfo, error)
 	AddFirstAdmin(ctx context.Context, passwordHash string) error
 }
@@ -34,6 +34,7 @@ type UserInfo struct {
 	Email        string
 	PasswordHash string
 	Role         string
+	Phone        string
 }
 
 func NewUsersDB(dbPoll *pgxpool.Pool, log *slog.Logger) *UserRepositoryImpl {
@@ -71,17 +72,17 @@ RETURNING id`
 	return id, nil
 }
 
-func (us *UserRepositoryImpl) GetUser(ctx context.Context, userEmail string) (UserInfo, error) {
-	query := `SELECT email, first_name, last_name, email, password, role FROM users WHERE id = $1`
+func (us *UserRepositoryImpl) GetUser(ctx context.Context, userId int64) (UserInfo, error) {
+	query := `SELECT first_name, last_name, email, password, role, phone FROM users WHERE id = $1`
 
 	var user UserInfo
-	err := us.db.QueryRow(ctx, query, userEmail).Scan(
-		&user.ID,
+	err := us.db.QueryRow(ctx, query, userId).Scan(
 		&user.FirstName,
 		&user.LastName,
 		&user.Email,
 		&user.PasswordHash,
-		&user.Role)
+		&user.Role,
+		&user.Phone)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return UserInfo{}, ErrUserNotFound
 	}
