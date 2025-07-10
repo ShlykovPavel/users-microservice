@@ -3,6 +3,7 @@ package users_db
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/create_user"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database"
 	"github.com/jackc/pgx/v5"
@@ -17,6 +18,7 @@ var ErrUserNotFound = errors.New("Пользователь не найден ")
 type UserRepository interface {
 	CreateUser(ctx context.Context, userinfo *create_user.UserCreate) (int64, error)
 	GetUser(ctx context.Context, userId int64) (UserInfo, error)
+	GetUserList(ctx context.Context) ([]UserInfo, error)
 	CheckAdminInDB(ctx context.Context) (UserInfo, error)
 	AddFirstAdmin(ctx context.Context, passwordHash string) error
 }
@@ -58,9 +60,8 @@ RETURNING id`
 	var id int64
 	err := us.db.QueryRow(ctx, query, userinfo.FirstName, userinfo.LastName, userinfo.Email, userinfo.Password, userinfo.Phone).Scan(&id)
 	if err != nil {
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			us.log.Warn("Database query canceled or timed out", slog.Any("error", err))
-			return 0, err
+		if ctxErr := database.DbCtxError(ctx, err, us.log); ctxErr != nil {
+			return 0, ctxErr
 		}
 		dbErr := database.PsqlErrorHandler(err)
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == database.PSQLUniqueError {
@@ -87,10 +88,42 @@ func (us *UserRepositoryImpl) GetUser(ctx context.Context, userId int64) (UserIn
 		return UserInfo{}, ErrUserNotFound
 	}
 	if err != nil {
+		if ctxErr := database.DbCtxError(ctx, err, us.log); ctxErr != nil {
+			return UserInfo{}, ctxErr
+		}
 		dbErr := database.PsqlErrorHandler(err)
 		return UserInfo{}, dbErr
 	}
 	return user, nil
+}
+
+func (us *UserRepositoryImpl) GetUserList(ctx context.Context) ([]UserInfo, error) {
+	query := `SELECT id, first_name, last_name, email, role, phone FROM users`
+	rows, err := us.db.Query(ctx, query)
+	if err != nil {
+		if ctxErr := database.DbCtxError(ctx, err, us.log); ctxErr != nil {
+			return []UserInfo{}, ctxErr
+		}
+		dbErr := database.PsqlErrorHandler(err)
+		return []UserInfo{}, dbErr
+	}
+	defer rows.Close()
+
+	var users []UserInfo
+	for rows.Next() {
+		var user UserInfo
+		if err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Role, &user.Phone); err != nil {
+			us.log.Error("Error while scanning query rows", slog.Any("error", err))
+			dbErr := database.PsqlErrorHandler(err)
+			return []UserInfo{}, dbErr
+		}
+		users = append(users, user)
+	}
+	if err := rows.Err(); err != nil {
+		us.log.Error("Error while reading rows", slog.Any("error", err))
+		return []UserInfo{}, fmt.Errorf("rows error: %w", err)
+	}
+	return users, nil
 }
 
 func (us *UserRepositoryImpl) CheckAdminInDB(ctx context.Context) (UserInfo, error) {

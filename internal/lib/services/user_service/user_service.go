@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/get_user_by_id"
+	"github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/get_users_list"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database/repositories/users_db"
 	"log/slog"
 	"strconv"
@@ -29,5 +30,33 @@ func GetUser(log *slog.Logger, userRepository users_db.UserRepository, userId in
 		LastName:  userInfo.LastName,
 		FirstName: userInfo.FirstName,
 	}, nil
+
+}
+
+// GetUserList retrieves a list of users from the repository and converts them to DTOs.
+// It takes a logger, user repository, and context as input.
+// Returns a slice of UserInfoList DTOs or an error if the operation fails.
+func GetUserList(log *slog.Logger, userRepository users_db.UserRepository, ctx context.Context) ([]get_users_list.UserInfoList, error) {
+	const op = "internal/lib/services/user_service/user_service.go/GetUserList"
+	log = log.With(slog.String("op", op))
+
+	users, err := userRepository.GetUserList(ctx)
+	if err != nil {
+		log.Error("Failed to get users list", "err", err)
+		return nil, err
+	}
+	userList := make([]get_users_list.UserInfoList, 0, len(users))
+	for _, user := range users {
+		userInfo := get_users_list.UserInfoList{
+			Id:        user.ID,
+			Email:     user.Email,
+			Phone:     user.Phone,
+			LastName:  user.LastName,
+			FirstName: user.FirstName,
+			Role:      user.Role,
+		}
+		userList = append(userList, userInfo)
+	}
+	return userList, nil
 
 }
