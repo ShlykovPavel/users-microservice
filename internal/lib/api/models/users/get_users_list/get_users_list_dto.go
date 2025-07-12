@@ -8,3 +8,14 @@ type UserInfoList struct {
 	FirstName string `json:"first_name" validate:"required"`
 	Role      string `json:"role" validate:"required"`
 }
+
+type UsersListMetaData struct {
+	Page   int   `json:"page"`
+	Limit  int   `json:"limit"`
+	Offset int   `json:"offset"`
+	Total  int64 `json:"total"`
+}
+type UsersList struct {
+	Users []UserInfoList    `json:"data"`
+	Meta  UsersListMetaData `json:"meta"`
+}

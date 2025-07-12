@@ -39,9 +39,9 @@ func (m *MockUserRepository) AddFirstAdmin(ctx context.Context, passwordHash str
 	args := m.Called(ctx, passwordHash)
 	return args.Error(1)
 }
-func (m *MockUserRepository) GetUserList(ctx context.Context) ([]users_db.UserInfo, error) {
+func (m *MockUserRepository) GetUserList(ctx context.Context, search string, limit, offset int, sort string) (users_db.UserListResult, error) {
 	args := m.Called(ctx)
-	return args.Get(0).([]users_db.UserInfo), args.Error(1)
+	return args.Get(0).(users_db.UserListResult), args.Error(1)
 }
 
 func TestCreateUser(t *testing.T) {

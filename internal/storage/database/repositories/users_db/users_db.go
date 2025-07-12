@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log/slog"
+	"strings"
 )
 
 var ErrEmailAlreadyExists = errors.New("Пользователь с email уже существует. ")
@@ -18,7 +19,7 @@ var ErrUserNotFound = errors.New("Пользователь не найден ")
 type UserRepository interface {
 	CreateUser(ctx context.Context, userinfo *create_user.UserCreate) (int64, error)
 	GetUser(ctx context.Context, userId int64) (UserInfo, error)
-	GetUserList(ctx context.Context) ([]UserInfo, error)
+	GetUserList(ctx context.Context, search string, limit, offset int, sort string) (UserListResult, error)
 	CheckAdminInDB(ctx context.Context) (UserInfo, error)
 	AddFirstAdmin(ctx context.Context, passwordHash string) error
 }
@@ -37,6 +38,10 @@ type UserInfo struct {
 	PasswordHash string
 	Role         string
 	Phone        string
+}
+type UserListResult struct {
+	Users []UserInfo
+	Total int64
 }
 
 func NewUsersDB(dbPoll *pgxpool.Pool, log *slog.Logger) *UserRepositoryImpl {
@@ -97,15 +102,56 @@ func (us *UserRepositoryImpl) GetUser(ctx context.Context, userId int64) (UserIn
 	return user, nil
 }
 
-func (us *UserRepositoryImpl) GetUserList(ctx context.Context) ([]UserInfo, error) {
-	query := `SELECT id, first_name, last_name, email, role, phone FROM users`
-	rows, err := us.db.Query(ctx, query)
-	if err != nil {
-		if ctxErr := database.DbCtxError(ctx, err, us.log); ctxErr != nil {
-			return []UserInfo{}, ctxErr
+func (us *UserRepositoryImpl) GetUserList(ctx context.Context, search string, limit, offset int, sort string) (UserListResult, error) {
+	// Базовый SQL-запрос для пользователей
+	query := "SELECT id, first_name, last_name, email, role, phone FROM users"
+	countQuery := "SELECT COUNT(*) FROM users"
+	args := []interface{}{}
+	countArgs := []interface{}{}
+
+	// Фильтрация по search
+	if search != "" {
+		query += " WHERE first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1"
+		countQuery += " WHERE first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1"
+		args = append(args, "%"+search+"%")
+		countArgs = append(countArgs, "%"+search+"%")
+	}
+
+	// Сортировка
+	if sort != "" {
+		parts := strings.Split(sort, ":")
+		if len(parts) == 2 && (parts[1] == "asc" || parts[1] == "desc") {
+			// Простая проверка допустимых полей
+			switch parts[0] {
+			case "id", "first_name", "last_name", "email", "role", "phone":
+				query += fmt.Sprintf(" ORDER BY %s %s", parts[0], strings.ToUpper(parts[1]))
+			default:
+				us.log.Warn("Invalid sort field", slog.String("field", parts[0]))
+				return UserListResult{}, fmt.Errorf("invalid sort field: %s", parts[0])
+			}
+		} else {
+			us.log.Warn("Invalid sort format", slog.String("sort", sort))
+			return UserListResult{}, fmt.Errorf("invalid sort format: %s", sort)
 		}
-		dbErr := database.PsqlErrorHandler(err)
-		return []UserInfo{}, dbErr
+	}
+
+	// Пагинация
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)+1, len(args)+2)
+	args = append(args, limit, offset)
+
+	// Подсчёт total
+	var total int64
+	err := us.db.QueryRow(ctx, countQuery, countArgs...).Scan(&total)
+	if err != nil {
+		us.log.Error("Failed to count users", slog.Any("error", err))
+		return UserListResult{}, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	// Получение пользователей
+	rows, err := us.db.Query(ctx, query, args...)
+	if err != nil {
+		us.log.Error("Failed to query users", slog.Any("error", err))
+		return UserListResult{}, fmt.Errorf("failed to query users: %w", err)
 	}
 	defer rows.Close()
 
@@ -113,17 +159,20 @@ func (us *UserRepositoryImpl) GetUserList(ctx context.Context) ([]UserInfo, erro
 	for rows.Next() {
 		var user UserInfo
 		if err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Role, &user.Phone); err != nil {
-			us.log.Error("Error while scanning query rows", slog.Any("error", err))
-			dbErr := database.PsqlErrorHandler(err)
-			return []UserInfo{}, dbErr
+			us.log.Error("Error scanning user row", slog.Any("error", err))
+			return UserListResult{}, fmt.Errorf("error scanning user row: %w", err)
 		}
 		users = append(users, user)
 	}
 	if err := rows.Err(); err != nil {
-		us.log.Error("Error while reading rows", slog.Any("error", err))
-		return []UserInfo{}, fmt.Errorf("rows error: %w", err)
+		us.log.Error("Error reading rows", slog.Any("error", err))
+		return UserListResult{}, fmt.Errorf("error reading rows: %w", err)
 	}
-	return users, nil
+
+	return UserListResult{
+		Users: users,
+		Total: total,
+	}, nil
 }
 
 func (us *UserRepositoryImpl) CheckAdminInDB(ctx context.Context) (UserInfo, error) {

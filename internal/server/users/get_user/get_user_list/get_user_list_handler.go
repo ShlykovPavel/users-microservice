@@ -2,6 +2,7 @@ package get_user_list
 
 import (
 	"context"
+	"github.com/ShlykovPavel/users-microservice/internal/lib/api/query_params"
 	resp "github.com/ShlykovPavel/users-microservice/internal/lib/api/response"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/services/user_service"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database/repositories/users_db"
@@ -17,8 +18,15 @@ func GetUserList(logger *slog.Logger, userDbRepository users_db.UserRepository, 
 
 		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		defer cancel()
+		requestQuery := r.URL.Query()
+		parsedQuery, err := query_params.ParseStandardQueryParams(requestQuery, log)
+		if err != nil {
+			log.Error("Ошибка парсинга параметров", "error", err, "request", requestQuery)
+			resp.RenderResponse(w, r, http.StatusBadRequest, resp.Error("Ошибка параметров запроса"))
+			return
+		}
 
-		userList, err := user_service.GetUserList(log, userDbRepository, ctx)
+		userList, err := user_service.GetUserList(log, userDbRepository, ctx, parsedQuery)
 		if err != nil {
 			log.Error("Error while getting user list", "error", err)
 			resp.RenderResponse(w, r, http.StatusInternalServerError, resp.Error("Something went wrong, while getting user list"))
