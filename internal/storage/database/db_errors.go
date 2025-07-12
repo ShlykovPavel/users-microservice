@@ -1,8 +1,11 @@
 package database
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5/pgconn"
+	"log/slog"
 )
 
 // Коды ошибок PosgreSQL
@@ -30,4 +33,12 @@ func PsqlErrorHandler(err error) error {
 		}
 	}
 	return err
+}
+
+func DbCtxError(ctx context.Context, err error, log *slog.Logger) error {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		log.Warn("Request canceled or timed out", slog.Any("error", err), slog.String("context", fmt.Sprintf("%v", ctx)))
+		return err
+	}
+	return nil
 }

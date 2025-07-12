@@ -44,6 +44,20 @@ func (m *MockUserRepository) AddFirstAdmin(ctx context.Context, passwordHash str
 	return args.Error(0)
 }
 
+func (m *MockUserRepository) GetUserList(ctx context.Context, search string, limit, offset int, sort string) (users_db.UserListResult, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(users_db.UserListResult), args.Error(1)
+}
+func (m *MockUserRepository) UpdateUser(ctx context.Context, id int64, firstName, lastName, email, phone, role string) error {
+	args := m.Called(ctx, id, firstName, lastName, email, phone, role)
+	return args.Error(0)
+}
+
+func (m *MockUserRepository) DeleteUser(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
 func TestGetUser(t *testing.T) {
 	tests := []struct {
 		name           string
