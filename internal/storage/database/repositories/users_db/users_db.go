@@ -23,6 +23,7 @@ type UserRepository interface {
 	CheckAdminInDB(ctx context.Context) (UserInfo, error)
 	AddFirstAdmin(ctx context.Context, passwordHash string) error
 	UpdateUser(ctx context.Context, id int64, firstName, lastName, email, phone, role string) error
+	DeleteUser(ctx context.Context, id int64) error
 }
 
 type UserRepositoryImpl struct {
@@ -238,5 +239,22 @@ func (us *UserRepositoryImpl) UpdateUser(ctx context.Context, id int64, firstNam
 	}
 	us.log.Debug("User updated successfully", "id", id)
 	return nil
+}
 
+func (us *UserRepositoryImpl) DeleteUser(ctx context.Context, id int64) error {
+	query := `DELETE FROM users WHERE id = $1`
+	result, err := us.db.Exec(ctx, query, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrUserNotFound
+		}
+		dbErr := database.PsqlErrorHandler(err)
+		us.log.Error("Failed to delete user in db", slog.String("error", err.Error()))
+		return dbErr
+	}
+	if result.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+	us.log.Debug("User deleted successfully", "id", id)
+	return nil
 }

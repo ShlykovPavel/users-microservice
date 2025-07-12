@@ -53,6 +53,11 @@ func (m *MockUserRepository) UpdateUser(ctx context.Context, id int64, firstName
 	return args.Error(0)
 }
 
+func (m *MockUserRepository) DeleteUser(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
 func TestGetUser(t *testing.T) {
 	tests := []struct {
 		name           string

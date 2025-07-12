@@ -48,6 +48,10 @@ func (m *MockUserRepository) UpdateUser(ctx context.Context, id int64, firstName
 	args := m.Called(ctx, id, firstName, lastName, email, phone, role)
 	return args.Error(0)
 }
+func (m *MockUserRepository) DeleteUser(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
 
 func TestCreateUser(t *testing.T) {
 	tests := []struct {
