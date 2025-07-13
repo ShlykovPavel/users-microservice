@@ -108,13 +108,14 @@ func (us *UserRepositoryImpl) GetUserList(ctx context.Context, search string, li
 	// Базовый SQL-запрос для пользователей
 	query := "SELECT id, first_name, last_name, email, role, phone FROM users"
 	countQuery := "SELECT COUNT(*) FROM users"
+	searchQuery := " WHERE first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1"
 	args := []interface{}{}
 	countArgs := []interface{}{}
 
 	// Фильтрация по search
 	if search != "" {
-		query += " WHERE first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1"
-		countQuery += " WHERE first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1"
+		query += searchQuery
+		countQuery += searchQuery
 		args = append(args, "%"+search+"%")
 		countArgs = append(countArgs, "%"+search+"%")
 	}
