@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/ShlykovPavel/users-microservice/internal/config"
 	users "github.com/ShlykovPavel/users-microservice/internal/server/users/create"
+	users_delete "github.com/ShlykovPavel/users-microservice/internal/server/users/delete"
 	"github.com/ShlykovPavel/users-microservice/internal/server/users/get_user"
 	"github.com/ShlykovPavel/users-microservice/internal/server/users/get_user/get_user_list"
+	"github.com/ShlykovPavel/users-microservice/internal/server/users/update_user"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database/repositories/users_db"
 	"github.com/go-chi/chi/v5"
@@ -53,6 +55,8 @@ func main() {
 	router.Post("/register", users.CreateUser(logger, userRepository, cfg.ServerTimeout))
 	router.Get("/users/{id}", get_user.GetUserById(logger, userRepository, cfg.ServerTimeout))
 	router.Get("/users", get_user_list.GetUserList(logger, userRepository, cfg.ServerTimeout))
+	router.Put("/users/{id}", update_user.UpdateUserHandler(logger, userRepository, cfg.ServerTimeout))
+	router.Delete("/users/{id}", users_delete.DeleteUserHandler(logger, userRepository, cfg.ServerTimeout))
 
 	logger.Info("Starting HTTP server", slog.String("adress", cfg.Address))
 	// Run server

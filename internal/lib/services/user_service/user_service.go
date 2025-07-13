@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/get_user_by_id"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/get_users_list"
+	"github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/update_user"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/api/query_params"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database/repositories/users_db"
 	"log/slog"
@@ -70,4 +71,30 @@ func GetUserList(log *slog.Logger, userRepository users_db.UserRepository, ctx c
 	}
 	return userDto, nil
 
+}
+
+func UpdateUser(log *slog.Logger, userRepository users_db.UserRepository, ctx context.Context, dto update_user.UpdateUserDto, id int64) error {
+	const op = "internal/lib/services/user_service/user_service.go/UpdateUser"
+	log = log.With(slog.String("op", op),
+		slog.String("UserId", strconv.FormatInt(id, 10)))
+
+	err := userRepository.UpdateUser(ctx, id, dto.FirstName, dto.LastName, dto.Email, dto.Phone, dto.Role)
+	if err != nil {
+		log.Error("Failed to update user", "err", err)
+		return err
+	}
+	return nil
+}
+
+func DeleteUser(log *slog.Logger, userRepository users_db.UserRepository, ctx context.Context, id int64) error {
+	const op = "internal/lib/services/user_service/user_service.go/DeleteUser"
+	log = log.With(slog.String("op", op),
+		slog.String("UserId", strconv.FormatInt(id, 10)))
+
+	err := userRepository.DeleteUser(ctx, id)
+	if err != nil {
+		log.Error("Failed to delete user", "err", err)
+		return err
+	}
+	return nil
 }

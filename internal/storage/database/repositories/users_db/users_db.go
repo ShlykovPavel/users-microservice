@@ -22,6 +22,8 @@ type UserRepository interface {
 	GetUserList(ctx context.Context, search string, limit, offset int, sort string) (UserListResult, error)
 	CheckAdminInDB(ctx context.Context) (UserInfo, error)
 	AddFirstAdmin(ctx context.Context, passwordHash string) error
+	UpdateUser(ctx context.Context, id int64, firstName, lastName, email, phone, role string) error
+	DeleteUser(ctx context.Context, id int64) error
 }
 
 type UserRepositoryImpl struct {
@@ -106,13 +108,14 @@ func (us *UserRepositoryImpl) GetUserList(ctx context.Context, search string, li
 	// Базовый SQL-запрос для пользователей
 	query := "SELECT id, first_name, last_name, email, role, phone FROM users"
 	countQuery := "SELECT COUNT(*) FROM users"
+	searchQuery := " WHERE first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1"
 	args := []interface{}{}
 	countArgs := []interface{}{}
 
 	// Фильтрация по search
 	if search != "" {
-		query += " WHERE first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1"
-		countQuery += " WHERE first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1"
+		query += searchQuery
+		countQuery += searchQuery
 		args = append(args, "%"+search+"%")
 		countArgs = append(countArgs, "%"+search+"%")
 	}
@@ -217,5 +220,42 @@ func (us *UserRepositoryImpl) SetAdminRole(ctx context.Context, id int64) error 
 	if result.RowsAffected() == 0 {
 		return ErrUserNotFound
 	}
+	return nil
+}
+
+func (us *UserRepositoryImpl) UpdateUser(ctx context.Context, id int64, firstName, lastName, email, phone, role string) error {
+	query := `UPDATE users SET first_name = $1, last_name = $2, email = $3, phone = $4, role = $5 WHERE id = $6`
+
+	result, err := us.db.Exec(ctx, query, firstName, lastName, email, phone, role, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrUserNotFound
+		}
+		dbErr := database.PsqlErrorHandler(err)
+		us.log.Error("Failed to update user in db", slog.String("error", err.Error()))
+		return dbErr
+	}
+	if result.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+	us.log.Debug("User updated successfully", "id", id)
+	return nil
+}
+
+func (us *UserRepositoryImpl) DeleteUser(ctx context.Context, id int64) error {
+	query := `DELETE FROM users WHERE id = $1`
+	result, err := us.db.Exec(ctx, query, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrUserNotFound
+		}
+		dbErr := database.PsqlErrorHandler(err)
+		us.log.Error("Failed to delete user in db", slog.String("error", err.Error()))
+		return dbErr
+	}
+	if result.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+	us.log.Debug("User deleted successfully", "id", id)
 	return nil
 }
