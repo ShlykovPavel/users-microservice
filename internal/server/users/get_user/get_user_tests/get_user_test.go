@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/create_user"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/get_user_by_id"
+	"github.com/ShlykovPavel/users-microservice/internal/lib/api/query_params"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/api/response"
 	"github.com/ShlykovPavel/users-microservice/internal/server/users/get_user"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database/repositories/users_db"
@@ -44,7 +45,7 @@ func (m *MockUserRepository) AddFirstAdmin(ctx context.Context, passwordHash str
 	return args.Error(0)
 }
 
-func (m *MockUserRepository) GetUserList(ctx context.Context, search string, limit, offset int, sort string) (users_db.UserListResult, error) {
+func (m *MockUserRepository) GetUserList(ctx context.Context, search string, limit, offset int, sortParams []query_params.SortParam) (users_db.UserListResult, error) {
 	args := m.Called(ctx)
 	return args.Get(0).(users_db.UserListResult), args.Error(1)
 }

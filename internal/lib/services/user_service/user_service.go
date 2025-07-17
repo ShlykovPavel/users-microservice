@@ -38,11 +38,11 @@ func GetUser(log *slog.Logger, userRepository users_db.UserRepository, userId in
 // GetUserList retrieves a list of users from the repository and converts them to DTOs.
 // It takes a logger, user repository, and context as input.
 // Returns a slice of UserInfoList DTOs or an error if the operation fails.
-func GetUserList(log *slog.Logger, userRepository users_db.UserRepository, ctx context.Context, queryParams query_params.ListUsersParams) (get_users_list.UsersList, error) {
+func GetUserList(log *slog.Logger, userRepository users_db.UserRepository, ctx context.Context, queryParams query_params.ListQueryParams) (get_users_list.UsersList, error) {
 	const op = "internal/lib/services/user_service/user_service.go/GetUserList"
 	log = log.With(slog.String("op", op))
 
-	result, err := userRepository.GetUserList(ctx, queryParams.Search, queryParams.Limit, queryParams.Offset, queryParams.Sort)
+	result, err := userRepository.GetUserList(ctx, queryParams.Search, queryParams.Limit, queryParams.Offset, queryParams.SortParams)
 	if err != nil {
 		log.Error("Failed to get users list", "err", err)
 		return get_users_list.UsersList{}, err
