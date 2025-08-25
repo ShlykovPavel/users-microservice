@@ -3,14 +3,13 @@ package update_user
 import (
 	"context"
 	"errors"
+	"github.com/ShlykovPavel/users-microservice/internal/lib/api/body"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/create_user"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/update_user"
 	resp "github.com/ShlykovPavel/users-microservice/internal/lib/api/response"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/services/user_service"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database/repositories/users_db"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
-	"github.com/go-playground/validator"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -39,18 +38,10 @@ func UpdateUserHandler(log *slog.Logger, userRepository users_db.UserRepository,
 		defer cancel()
 
 		var UpdateUserDto update_user.UpdateUserDto
-		err = render.DecodeJSON(r.Body, &UpdateUserDto)
+		err = body.DecodeAndValidateJson(r, &UpdateUserDto)
 		if err != nil {
 			log.Error("Failed decoding body", "err", err, "body", r.Body)
 			resp.RenderResponse(w, r, http.StatusInternalServerError, resp.Error("Failed reading body"))
-			return
-		}
-
-		err = validator.New().Struct(&UpdateUserDto)
-		if err != nil {
-			validationErrors := err.(validator.ValidationErrors)
-			log.Error("Failed while validating body", "err", err, "body", r.Body)
-			resp.RenderResponse(w, r, http.StatusBadRequest, resp.ValidationError(validationErrors))
 			return
 		}
 

@@ -3,13 +3,12 @@ package users
 import (
 	"context"
 	"errors"
+	"github.com/ShlykovPavel/users-microservice/internal/lib/api/body"
 	usersDto "github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/create_user"
 	resp "github.com/ShlykovPavel/users-microservice/internal/lib/api/response"
 	users "github.com/ShlykovPavel/users-microservice/internal/server/users"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database/repositories/users_db"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/render"
-	"github.com/go-playground/validator"
 	"log/slog"
 	"net/http"
 	"time"
@@ -27,19 +26,10 @@ func CreateUser(log *slog.Logger, userRepository users_db.UserRepository, timeou
 		defer cancel()
 
 		var user usersDto.UserCreate
-		err := render.DecodeJSON(r.Body, &user)
+		err := body.DecodeAndValidateJson(r, &user)
 		if err != nil {
 			log.Error("Error while decoding request body", "err", err)
 			resp.RenderResponse(w, r, http.StatusBadRequest, resp.Error(err.Error()))
-			return
-		}
-
-		//Валидация
-		//TODO Посмотреть где ещё создаются валидаторы, и если их много, то нужно вынести инициализацию валидатора глобально для повышения оптимизации
-		if err = validator.New().Struct(&user); err != nil {
-			validationErrors := err.(validator.ValidationErrors)
-			log.Error("Error validating request body", "err", validationErrors)
-			resp.RenderResponse(w, r, http.StatusBadRequest, resp.ValidationError(validationErrors))
 			return
 		}
 
