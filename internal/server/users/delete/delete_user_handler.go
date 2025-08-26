@@ -13,6 +13,16 @@ import (
 	"time"
 )
 
+// DeleteUserHandler godoc
+// @Summary Удалить пользователя
+// @Description Удалить пользователя по ID
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID пользователя"
+// @Success 204
+// @Router /users/{id} [delete]
 func DeleteUserHandler(logger *slog.Logger, userDbRepository users_db.UserRepository, timeout time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log := logger.With(slog.String("op", "internal/server/users/delete/delete_user_handler.go/DeleteUserHandler"))

@@ -1,8 +1,8 @@
 ENV: dev
 address: localhost:8080
 db_host: localhost
-db_port: 5432
-db_name: auth_service_db
+db_port: 5433
+db_name: user_service_db
 db_user: postgres
 db_password: mysecretpassword
 jwt_duration: 1h

@@ -3,10 +3,10 @@ package get_user
 import (
 	"context"
 	"errors"
-	"github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/get_user_by_id"
 	resp "github.com/ShlykovPavel/users-microservice/internal/lib/api/response"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/services/user_service"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database/repositories/users_db"
+	"github.com/ShlykovPavel/users-microservice/models/users/get_user_by_id"
 	"github.com/go-chi/chi/v5"
 	"log/slog"
 	"net/http"
@@ -14,6 +14,15 @@ import (
 	"time"
 )
 
+// GetUserById godoc
+// @Summary Получить пользователя по ID
+// @Description Получить детальную информацию о пользователе
+// @Tags Users
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "ID пользователя"
+// @Success 200 {object} get_user_by_id.UserInfo
+// @Router /users/{id} [get]
 func GetUserById(logger *slog.Logger, userDbRepository users_db.UserRepository, timeout time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "server/users/get_user/get_user_by_id_handler.go./GetUserById"

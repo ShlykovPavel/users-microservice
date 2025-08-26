@@ -6,11 +6,20 @@ import (
 	resp "github.com/ShlykovPavel/users-microservice/internal/lib/api/response"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/services/user_service"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database/repositories/users_db"
+	_ "github.com/ShlykovPavel/users-microservice/models/users/get_users_list"
 	"log/slog"
 	"net/http"
 	"time"
 )
 
+// GetUserList godoc
+// @Summary Получить список пользователей
+// @Description Получить список пользователей
+// @Tags Users
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} get_users_list.UsersList
+// @Router /users [get]
 func GetUserList(logger *slog.Logger, userDbRepository users_db.UserRepository, timeout time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "internal/server/users/get_user/get_user_list/get_user_list_handler.go/get_user_list"

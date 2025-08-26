@@ -3,11 +3,11 @@ package user_service
 import (
 	"context"
 	"errors"
-	"github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/get_user_by_id"
-	"github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/get_users_list"
-	"github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/update_user"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/api/query_params"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database/repositories/users_db"
+	"github.com/ShlykovPavel/users-microservice/models/users/get_user_by_id"
+	"github.com/ShlykovPavel/users-microservice/models/users/get_users_list"
+	"github.com/ShlykovPavel/users-microservice/models/users/update_user"
 	"log/slog"
 	"strconv"
 )

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	_ "github.com/ShlykovPavel/users-microservice/docs"
 	"github.com/ShlykovPavel/users-microservice/internal/app"
 	"github.com/ShlykovPavel/users-microservice/internal/config"
 	"log"
@@ -25,7 +26,7 @@ const (
 // @name Authorization
 // @description Add "Bearer" before token
 func main() {
-	cfg, err := config.LoadConfig(".env")
+	cfg, err := config.LoadConfig("secret_config.yaml")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	validators "github.com/ShlykovPavel/users-microservice/internal/lib/api/validator"
 	"github.com/go-chi/render"
+	"github.com/go-playground/validator"
 	"log/slog"
 	"net/http"
 )
@@ -21,7 +22,8 @@ func DecodeAndValidateJson(r *http.Request, v interface{}) error {
 
 	// Валидируем структуру
 	if err := validators.GetValidator().Struct(v); err != nil {
-		return err
+		validateErr := err.(validator.ValidationErrors)
+		return validateErr
 	}
 
 	return nil

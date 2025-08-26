@@ -15,6 +15,7 @@ type UsersListMetaData struct {
 	Offset int   `json:"offset"`
 	Total  int64 `json:"total"`
 }
+
 type UsersList struct {
 	Users []UserInfoList    `json:"data"`
 	Meta  UsersListMetaData `json:"meta"`
