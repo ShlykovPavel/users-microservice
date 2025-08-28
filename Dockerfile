@@ -17,7 +17,7 @@ WORKDIR /app
 # Копируем бинарник и файлы конфигурации
 COPY --from=builder /build_app/users_service .
 COPY --from=builder /build_app/config.yaml .
-COPY --from=builder /build_app/secret_config.yaml .
+#COPY --from=builder /build_app/secret_config.yaml .
 EXPOSE 8080
 USER appuser
 ENTRYPOINT ["./users_service"]
