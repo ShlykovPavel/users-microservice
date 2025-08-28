@@ -6,7 +6,7 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: # Добавляет возможность ручного запуска
+  workflow_dispatch:
 
 # Переменные окружения
 env:
@@ -32,15 +32,21 @@ jobs:
         with:
           go-version: '1.23.5'
 
-      # Шаг 3: Устанавливаем зависимости Go
+      # Шаг 3: Устанавливаем swag и генерируем документацию
+      - name: Generate Swagger docs
+        run: |
+          go install github.com/swaggo/swag/cmd/swag@v1.16.6
+          swag init -g cmd/users_service/main.go --output docs --parseDependency --parseInternal
+
+      # Шаг 4: Устанавливаем зависимости Go
       - name: Install dependencies
         run: go get -v -t -d ./...
 
-      # Шаг 4: Запускаем тесты (опционально)
+      # Шаг 5: Запускаем тесты (опционально)
       - name: Run tests
         run: go test -v ./...
 
-      # Шаг 5: Логинимся в GitHub Container Registry
+      # Шаг 6: Логинимся в GitHub Container Registry
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
@@ -48,7 +54,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Шаг 6: Извлекаем метаданные для тегов и меток
+      # Шаг 7: Извлекаем метаданные для тегов и меток
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -57,7 +63,7 @@ jobs:
           tags: |
             type=sha,format=short
 
-      # Шаг 7: Собираем и публикуем образ
+      # Шаг 8: Собираем и публикуем образ
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
