@@ -3,18 +3,25 @@ package users
 import (
 	"context"
 	"errors"
-	usersDto "github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/create_user"
+	"github.com/ShlykovPavel/users-microservice/internal/lib/api/body"
 	resp "github.com/ShlykovPavel/users-microservice/internal/lib/api/response"
 	users "github.com/ShlykovPavel/users-microservice/internal/server/users"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database/repositories/users_db"
+	"github.com/ShlykovPavel/users-microservice/models/users/create_user"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/render"
 	"github.com/go-playground/validator"
 	"log/slog"
 	"net/http"
 	"time"
 )
 
+// CreateUser godoc
+// @Summary Создать пользователя
+// @Description Регистрирует пользователя в системе
+// @Tags Users
+// @Param input body create_user.UserCreate true "Данные пользователя"
+// @Success 201 {object} create_user.CreateUserResponse
+// @Router /register [post]
 func CreateUser(log *slog.Logger, userRepository users_db.UserRepository, timeout time.Duration) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "server/users.CreateUser"
@@ -26,20 +33,15 @@ func CreateUser(log *slog.Logger, userRepository users_db.UserRepository, timeou
 		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		defer cancel()
 
-		var user usersDto.UserCreate
-		err := render.DecodeJSON(r.Body, &user)
+		var user create_user.UserCreate
+		err := body.DecodeAndValidateJson(r, &user)
 		if err != nil {
 			log.Error("Error while decoding request body", "err", err)
+			if validationErrors, ok := err.(validator.ValidationErrors); ok {
+				resp.RenderResponse(w, r, http.StatusBadRequest, resp.ValidationError(validationErrors))
+				return
+			}
 			resp.RenderResponse(w, r, http.StatusBadRequest, resp.Error(err.Error()))
-			return
-		}
-
-		//Валидация
-		//TODO Посмотреть где ещё создаются валидаторы, и если их много, то нужно вынести инициализацию валидатора глобально для повышения оптимизации
-		if err = validator.New().Struct(&user); err != nil {
-			validationErrors := err.(validator.ValidationErrors)
-			log.Error("Error validating request body", "err", validationErrors)
-			resp.RenderResponse(w, r, http.StatusBadRequest, resp.ValidationError(validationErrors))
 			return
 		}
 
@@ -71,7 +73,7 @@ func CreateUser(log *slog.Logger, userRepository users_db.UserRepository, timeou
 		}
 
 		log.Info("Created user", "user id", userId)
-		resp.RenderResponse(w, r, http.StatusCreated, usersDto.CreateUserResponse{
+		resp.RenderResponse(w, r, http.StatusCreated, create_user.CreateUserResponse{
 			resp.OK(),
 			userId,
 		})

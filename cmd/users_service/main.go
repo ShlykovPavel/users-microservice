@@ -1,21 +1,12 @@
 package main
 
 import (
-	"context"
 	"fmt"
+	_ "github.com/ShlykovPavel/users-microservice/docs"
+	"github.com/ShlykovPavel/users-microservice/internal/app"
 	"github.com/ShlykovPavel/users-microservice/internal/config"
-	users "github.com/ShlykovPavel/users-microservice/internal/server/users/create"
-	users_delete "github.com/ShlykovPavel/users-microservice/internal/server/users/delete"
-	"github.com/ShlykovPavel/users-microservice/internal/server/users/get_user"
-	"github.com/ShlykovPavel/users-microservice/internal/server/users/get_user/get_user_list"
-	"github.com/ShlykovPavel/users-microservice/internal/server/users/update_user"
-	"github.com/ShlykovPavel/users-microservice/internal/storage/database"
-	"github.com/ShlykovPavel/users-microservice/internal/storage/database/repositories/users_db"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"log"
 	"log/slog"
-	"net/http"
 	"os"
 )
 
@@ -25,8 +16,17 @@ const (
 	envProd  = "prod"
 )
 
+// @title Users Microservice API
+// @version 1.0
+// @description API для управления бронированиями
+// @host localhost:8080
+// @BasePath /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Add "Bearer" before token
 func main() {
-	cfg, err := config.LoadConfig(".env")
+	cfg, err := config.LoadConfig("secret_config.yaml")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,44 +34,9 @@ func main() {
 	logger := setupLogger(cfg.Env)
 	logger.Info("Starting application")
 	logger.Debug("Debug messages enabled")
-	dbConfig := database.DbConfig{
-		DbName:     cfg.DbName,
-		DbUser:     cfg.DbUser,
-		DbPassword: cfg.DbPassword,
-		DbHost:     cfg.DbHost,
-		DbPort:     cfg.DbPort,
-	}
 
-	poll, err := database.CreatePool(context.Background(), &dbConfig, logger)
-
-	userRepository := users_db.NewUsersDB(poll, logger)
-
-	router := chi.NewRouter()
-	router.Use(middleware.RequestID)
-	router.Use(middleware.Logger)
-	router.Use(middleware.Recoverer)
-	router.Use(middleware.URLFormat)
-
-	router.Post("/register", users.CreateUser(logger, userRepository, cfg.ServerTimeout))
-	router.Get("/users/{id}", get_user.GetUserById(logger, userRepository, cfg.ServerTimeout))
-	router.Get("/users", get_user_list.GetUserList(logger, userRepository, cfg.ServerTimeout))
-	router.Put("/users/{id}", update_user.UpdateUserHandler(logger, userRepository, cfg.ServerTimeout))
-	router.Delete("/users/{id}", users_delete.DeleteUserHandler(logger, userRepository, cfg.ServerTimeout))
-
-	logger.Info("Starting HTTP server", slog.String("adress", cfg.Address))
-	// Run server
-	srv := &http.Server{
-		Addr:              cfg.Address,
-		Handler:           router,
-		ReadHeaderTimeout: cfg.ServerTimeout,
-		WriteTimeout:      cfg.ServerTimeout,
-		//IdleTimeout:       cfg.HTTPServer.IdleTimeout,
-	}
-	if err := srv.ListenAndServe(); err != nil {
-		logger.Error("failed to start server", "error", err.Error())
-		os.Exit(1)
-	}
-	logger.Info("Stopped HTTP server")
+	application := app.NewApp(logger, cfg)
+	application.Run()
 }
 
 func setupLogger(env string) *slog.Logger {

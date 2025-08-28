@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/ShlykovPavel/users-microservice/internal/lib/api/models/users/create_user"
+	"fmt"
 	"github.com/ShlykovPavel/users-microservice/internal/lib/api/query_params"
+	validators "github.com/ShlykovPavel/users-microservice/internal/lib/api/validator"
 	users "github.com/ShlykovPavel/users-microservice/internal/server/users/create"
 	"github.com/ShlykovPavel/users-microservice/internal/storage/database/repositories/users_db"
+	"github.com/ShlykovPavel/users-microservice/models/users/create_user"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -131,13 +133,15 @@ func TestCreateUser(t *testing.T) {
 		},
 	}
 
-	//mockRepo := new(MockUserRepository)
-	//timeout := time.Duration(5 * time.Second)
+	if err := validators.InitValidator(); err != nil {
+		fmt.Println("Failed to initialize validator")
+	}
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 			logger := slog.Default()
 			timeout := 5 * time.Second
 			mockRepo := new(MockUserRepository)
+
 			handler := users.CreateUser(logger, mockRepo, timeout)
 
 			// Настраиваем мок
