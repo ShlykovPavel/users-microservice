@@ -62,6 +62,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha,format=short
+            type=raw,value=latest
 
       # Шаг 8: Собираем и публикуем образ
       - name: Build and push Docker image
